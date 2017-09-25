@@ -3,8 +3,8 @@ package com.lucio.customview.activity;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
+import com.lucio.customutil.widget.WaveView;
 import com.lucio.customview.R;
-import com.lucio.customview.widget.WaveView;
 
 import java.util.Random;
 import java.util.Timer;

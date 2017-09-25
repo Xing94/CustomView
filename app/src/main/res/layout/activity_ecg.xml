@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     tools:context="com.lucio.customview.activity.EcgActivity">
 
-    <com.lucio.customview.widget.WaveView
+    <com.lucio.customutil.widget.WaveView
         android:id="@+id/ecg_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
