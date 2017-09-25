@@ -13,6 +13,7 @@ import java.util.TimerTask;
 /**
  * 心电图activity
  * https://github.com/Xing94/CustomView.git
+ *
  */
 public class EcgActivity extends AppCompatActivity {
 
