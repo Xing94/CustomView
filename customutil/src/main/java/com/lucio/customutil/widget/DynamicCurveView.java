@@ -18,7 +18,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /**
- * 动态压力曲线图
+ * 动态曲线图
  */
 public class DynamicCurveView extends View {
 
