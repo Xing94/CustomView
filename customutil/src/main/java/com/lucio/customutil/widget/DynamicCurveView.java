@@ -235,12 +235,6 @@ public class DynamicCurveView extends SurfaceView implements SurfaceHolder.Callb
             drawAL(width / (ySum + 1.0f) + axlePaint.getStrokeWidth() / 2.0f, height - height / (xSum + 1.0f),
                     (width / (ySum + 1.0f)) + axlePaint.getStrokeWidth() / 2.0f, 10, tempCanvas, axlePaint);
 
-            tempCanvas.drawText("床头", width / (ySum + 1.0f) - textPaint.getTextSize() / 3.0f,
-                    height - height / (xSum + 1.0f) + textPaint.getTextSize() + radius, textPaint);
-
-            tempCanvas.drawText("床尾", width - textPaint.getTextSize() * 2.0f,
-                    height - height / (xSum + 1.0f) + textPaint.getTextSize() + radius, textPaint);
-
             for (int j = 1; j < 11; j++) {
                 float xx = width / (ySum + 1.0f) + width / (ySum + 1.0f) / 11 * j;
                 tempCanvas.drawLine(xx, height / (xSum + 1.0f), xx, height - height / (xSum + 1.0f), hiddenPaint);
@@ -249,7 +243,7 @@ public class DynamicCurveView extends SurfaceView implements SurfaceHolder.Callb
             //绘制竖线网格 加上X轴的刻度值
             for (int i = 2; i < (ySum + 1); i++) {
 
-                tempCanvas.drawText("D" + (i - 1), width / (ySum + 1.0f) * i - textPaint.getTextSize() / 2.0f,
+                tempCanvas.drawText(String.valueOf(i - 1), width / (ySum + 1.0f) * i - textPaint.getTextSize() / 2.0f,
                         height - height / (xSum + 1.0f) + textPaint.getTextSize() + radius, textPaint);
 
                 tempCanvas.drawLine(width / (ySum + 1.0f) * i, height / (xSum + 1.0f), width / (ySum + 1.0f)
@@ -284,7 +278,6 @@ public class DynamicCurveView extends SurfaceView implements SurfaceHolder.Callb
 
             textPaint.setTextSize(24.0f);
 
-            tempCanvas.drawText("Kg", width / (ySum + 1.0f) - 36, 0 + textPaint.getTextSize(), textPaint);
         }
         canvas.drawBitmap(gridBitmapCache, 0, 0, null);
     }
