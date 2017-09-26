@@ -41,6 +41,8 @@ public class DynamicCurveView extends View {
     private float[] stressData;
     //之前的数据 两个数据的变化来控制曲线变化效果
     private float[] beforeData;
+    //变化中的数据
+    private float[] changData;
 
     //网格X线的数量
     private float xSum;
@@ -133,13 +135,15 @@ public class DynamicCurveView extends View {
 
         stressData = new float[(int) ySum - 1];
         beforeData = new float[(int) ySum - 1];
+        changData = new float[(int) ySum - 1];
         for (int i = 0; i < stressData.length; i++) {
             stressData[i] = 0.0f;
             beforeData[i] = 0.0f;
+            changData[i] = 0.0f;
         }
 
         timeSpeed = 1;
-        time = 20;
+        time = 1000;
 
     }
 
