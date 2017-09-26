@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 
+import com.lucio.customview.activity.DynamicActivity;
 import com.lucio.customview.activity.EcgActivity;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
@@ -18,6 +19,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Button btnEcg = (Button) findViewById(R.id.btn_ecg);
 
         btnEcg.setOnClickListener(this);
+
+        findViewById(R.id.btn_dynamic).setOnClickListener(this);
     }
 
     @Override
@@ -25,6 +28,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (view.getId()) {
             case R.id.btn_ecg:
                 startActivity(new Intent(MainActivity.this, EcgActivity.class));
+                break;
+            case R.id.btn_dynamic:
+                startActivity(new Intent(MainActivity.this, DynamicActivity.class));
                 break;
         }
     }

@@ -12,15 +12,11 @@ import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View;
-
-import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * 动态压力曲线图
  */
-public class DynamicCurveView extends View {
+public class DynamicCurveSurfaceView extends SurfaceView implements SurfaceHolder.Callback {
 
     //曲线画笔
     private Paint linePaint;
@@ -65,22 +61,36 @@ public class DynamicCurveView extends View {
     // 坐标轴和网格bitmap缓存
     private Bitmap gridBitmapCache;
 
-    public DynamicCurveView(Context context) {
+    private Thread drawThread;
+    private Runnable runnable;
+
+    //是否正在运行
+    private boolean isRunning;
+
+    private SurfaceHolder mHolder;
+
+
+    public DynamicCurveSurfaceView(Context context) {
         super(context);
         init();
     }
 
-    public DynamicCurveView(Context context, @Nullable AttributeSet attrs) {
+    public DynamicCurveSurfaceView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
-    public DynamicCurveView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+    public DynamicCurveSurfaceView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
     }
 
     private void init() {
+        mHolder = getHolder();
+        mHolder.addCallback(this);
+        //设置surfaceView可以设置背景色
+        this.setZOrderOnTop(true);
+        mHolder.setFormat(PixelFormat.TRANSLUCENT);
 
         linePaint = new Paint();
         linePaint.setStyle(Paint.Style.STROKE);
@@ -139,18 +149,73 @@ public class DynamicCurveView extends View {
         }
 
         timeSpeed = 1;
-        time = 20;
+        time = 10;
+
+        isRunning = true;
+
+        runnable = new Runnable() {
+            @Override
+            public void run() {
+                while (isRunning) {
+                    synchronized (mHolder) {
+                        Canvas canvas = mHolder.lockCanvas();
+                        if (canvas == null) continue;
+                        doDraw(canvas);
+                        mHolder.unlockCanvasAndPost(canvas);
+                        try {
+                            Thread.sleep(5);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                }
+            }
+        };
 
     }
 
     @Override
-    protected void onDraw(Canvas canvas) {
+    public void surfaceCreated(SurfaceHolder surfaceHolder) {
+        start();
+        //重新创建：切换fragment时不会因为drawThread而错误
+
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+        width = i1;
+        height = i2;
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+        stop();
+    }
+
+    public void stop() {
+        isRunning = false;
+        timeSpeed = time;
+        drawThread = new Thread();
+        drawThread.start();
+    }
+
+    public void start() {
+        timeSpeed = 1;
+        isRunning = true;
+        drawThread = new Thread(runnable);
+        drawThread.start();
+    }
+
+    protected void doDraw(Canvas canvas) {
+        //清空画布
+
+        canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
         if (valueRange == 0) {
-            width = getWidth();
-            height = getHeight();
             valueRange = getHeight() - getHeight() / (xSum + 1.0f) * 2.0f;
         }
+
 
         //绘制刻度值
         drawGridding(canvas);
@@ -159,7 +224,7 @@ public class DynamicCurveView extends View {
 
     }
 
-    //绘制网格和刻度值
+    //绘制网格和刻度值 为什么要写这么多呢：计算太多了，取出来少一点判断
     private void drawGridding(Canvas canvas) {
         if (gridBitmapCache == null) {
             gridBitmapCache = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
@@ -221,25 +286,10 @@ public class DynamicCurveView extends View {
     private void drawBight(final Canvas canvas) {
         mPath.reset();
 
-        float yValue;
-        float nowValue = height - height / (xSum + 1.0f) - stressData[0] / maxValue * valueRange;
-        float beforValue = height - height / (xSum + 1.0f) - beforeData[0] / maxValue * valueRange;
-
-        if (stressData[0] > beforeData[0]) {
-            yValue = beforValue - (beforValue - nowValue) / time * timeSpeed;
-        } else {
-            yValue = beforValue + (nowValue - beforValue) / time * timeSpeed;
-        }
-
-        //绘制曲线的起点
-        mPath.moveTo(width / (ySum + 1) * 2, yValue);
-        //绘制数据点的起点
-        canvas.drawCircle(width / (ySum + 1.0f) * 2.0f, yValue, radius, pointPaint);
-
-        //绘制曲线和数据点
-        for (int i = 1; i < stressData.length; i++) {
-            nowValue = height - height / (xSum + 1.0f) - stressData[i] / maxValue * valueRange;
-            beforValue = height - height / (xSum + 1.0f) - beforeData[i] / maxValue * valueRange;
+        if (timeSpeed < time) {
+            float yValue;
+            float nowValue = height - height / (xSum + 1.0f) - stressData[0] / maxValue * valueRange;
+            float beforValue = height - height / (xSum + 1.0f) - beforeData[0] / maxValue * valueRange;
 
             if (stressData[0] > beforeData[0]) {
                 yValue = beforValue - (beforValue - nowValue) / time * timeSpeed;
@@ -247,24 +297,48 @@ public class DynamicCurveView extends View {
                 yValue = beforValue + (nowValue - beforValue) / time * timeSpeed;
             }
 
-            mPath.lineTo(width / (ySum + 1.0f) * (i + 2.0f), yValue);
+            //绘制曲线的起点
+            mPath.moveTo(width / (ySum + 1) * 2, yValue);
+            //绘制数据点的起点
+            canvas.drawCircle(width / (ySum + 1.0f) * 2.0f, yValue, radius, pointPaint);
 
-            canvas.drawCircle(width / (ySum + 1.0f) * (i + 2), yValue, radius, pointPaint);
+            //绘制曲线和数据点
+            for (int i = 1; i < stressData.length; i++) {
+                nowValue = height - height / (xSum + 1.0f) - stressData[i] / maxValue * valueRange;
+                beforValue = height - height / (xSum + 1.0f) - beforeData[i] / maxValue * valueRange;
+
+                if (stressData[0] > beforeData[0]) {
+                    yValue = beforValue - (beforValue - nowValue) / time * timeSpeed;
+                } else {
+                    yValue = beforValue + (nowValue - beforValue) / time * timeSpeed;
+                }
+
+                mPath.lineTo(width / (ySum + 1.0f) * (i + 2.0f), yValue);
+
+                canvas.drawCircle(width / (ySum + 1.0f) * (i + 2), yValue, radius, pointPaint);
+            }
+
+            timeSpeed++;
+        } else {
+            float yValue = height - height / (xSum + 1.0f) - stressData[0] / maxValue * valueRange;
+
+            //绘制曲线的起点
+            mPath.moveTo(width / (ySum + 1) * 2, yValue);
+            //绘制数据点的起点
+            canvas.drawCircle(width / (ySum + 1.0f) * 2.0f, yValue, radius, pointPaint);
+
+            //绘制曲线和数据点
+            for (int i = 1; i < stressData.length; i++) {
+                yValue = height - height / (xSum + 1.0f) - stressData[i] / maxValue * valueRange;
+
+                canvas.drawCircle(width / (ySum + 1.0f) * (i + 2), yValue, radius, pointPaint);
+                mPath.lineTo(width / (ySum + 1.0f) * (i + 2.0f), yValue);
+            }
+
+            System.arraycopy(this.stressData, 0, beforeData, 0, this.stressData.length);
         }
-
         canvas.drawPath(mPath, linePaint);
 
-        if (timeSpeed < time) {
-            new Timer().schedule(new TimerTask() {
-                @Override
-                public void run() {
-                }
-            }, 5);
-
-            invalidate();
-        }
-
-        timeSpeed++;
     }
 
     /**
@@ -331,9 +405,10 @@ public class DynamicCurveView extends View {
             } else {
                 this.stressData[i] = stressData[i];
             }
+//            this.stressData[i] = stressData[i];
         }
         timeSpeed = 1;
-        invalidate();
+
     }
 
     //按照分段设置数据
@@ -348,7 +423,6 @@ public class DynamicCurveView extends View {
             }
         }
         timeSpeed = 1;
-        invalidate();
 
     }
 
@@ -357,12 +431,10 @@ public class DynamicCurveView extends View {
         beforeData[position] = this.stressData[position];
         this.stressData[position] = stressData;
         timeSpeed = 1;
-        invalidate();
     }
 
     public int getStressData(int position) {
         return (int) this.stressData[position];
     }
-
 
 }
