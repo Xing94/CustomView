@@ -228,6 +228,7 @@ public class DynamicCurveView extends View {
         float yValue;
         float nowValue = height - height / (xSum + 1.0f) - stressData[0] / maxValue * valueRange;
         float beforValue = height - height / (xSum + 1.0f) - beforeData[0] / maxValue * valueRange;
+        changData[0] = stressData[0] / time * timeSpeed;
 
         if (stressData[0] > beforeData[0]) {
             yValue = beforValue - (beforValue - nowValue) / time * timeSpeed;
@@ -244,6 +245,7 @@ public class DynamicCurveView extends View {
         for (int i = 1; i < stressData.length; i++) {
             nowValue = height - height / (xSum + 1.0f) - stressData[i] / maxValue * valueRange;
             beforValue = height - height / (xSum + 1.0f) - beforeData[i] / maxValue * valueRange;
+            changData[i] = stressData[i] / time * timeSpeed;
 
             if (stressData[0] > beforeData[0]) {
                 yValue = beforValue - (beforValue - nowValue) / time * timeSpeed;
@@ -327,8 +329,9 @@ public class DynamicCurveView extends View {
 
     //设置数据 需要运行在主线程中
     public void setDynamicCurveData(float[] stressData) {
+//        this.stressData = changData;
         for (int i = 0; i < this.stressData.length; i++) {
-            beforeData[i] = this.stressData[i];
+            beforeData[i] = this.changData[i];
             //控制最大值 暂时不要
             if (stressData[i] > maxValue) {
                 this.stressData[i] = maxValue;
