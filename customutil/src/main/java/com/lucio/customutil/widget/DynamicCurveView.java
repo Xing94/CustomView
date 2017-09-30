@@ -6,12 +6,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.PixelFormat;
-import android.graphics.PorterDuff;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.View;
 
 import java.util.Timer;
@@ -41,8 +37,10 @@ public class DynamicCurveView extends View {
     private float[] stressData;
     //之前的数据 两个数据的变化来控制曲线变化效果
     private float[] beforeData;
-    //变化中的数据
-//    private float[] changData;
+    //变化中的数据：避免截胡的时候变化太突兀
+    private float[] changData;
+    //是否在变化中
+    private boolean isChanging;
 
     //网格X线的数量
     private float xSum;
@@ -135,16 +133,17 @@ public class DynamicCurveView extends View {
 
         stressData = new float[(int) ySum - 1];
         beforeData = new float[(int) ySum - 1];
-//        changData = new float[(int) ySum - 1];
+        changData = new float[(int) ySum - 1];
         for (int i = 0; i < stressData.length; i++) {
             stressData[i] = 0.0f;
             beforeData[i] = 0.0f;
-//            changData[i] = 0.0f;
+            changData[i] = 0.0f;
         }
 
         timeSpeed = 1;
-        time = 20;
+        time = 1000;
 
+        isChanging = false;
     }
 
     @Override
@@ -228,12 +227,13 @@ public class DynamicCurveView extends View {
         float yValue;
         float nowValue = height - height / (xSum + 1.0f) - stressData[0] / maxValue * valueRange;
         float beforValue = height - height / (xSum + 1.0f) - beforeData[0] / maxValue * valueRange;
-//        changData[0] = stressData[0] / time * timeSpeed;
 
         if (stressData[0] > beforeData[0]) {
             yValue = beforValue - (beforValue - nowValue) / time * timeSpeed;
+            changData[0] = beforeData[0] - (beforeData[0] - stressData[0]) / time * timeSpeed;
         } else {
             yValue = beforValue + (nowValue - beforValue) / time * timeSpeed;
+            changData[0] = beforeData[0] + (stressData[0] - beforeData[0]) / time * timeSpeed;
         }
 
         //绘制曲线的起点
@@ -245,12 +245,13 @@ public class DynamicCurveView extends View {
         for (int i = 1; i < stressData.length; i++) {
             nowValue = height - height / (xSum + 1.0f) - stressData[i] / maxValue * valueRange;
             beforValue = height - height / (xSum + 1.0f) - beforeData[i] / maxValue * valueRange;
-//            changData[i] = stressData[i] / time * timeSpeed;
 
             if (stressData[0] > beforeData[0]) {
                 yValue = beforValue - (beforValue - nowValue) / time * timeSpeed;
+                changData[i] = beforeData[i] - (beforeData[i] - stressData[i]) / time * timeSpeed;
             } else {
                 yValue = beforValue + (nowValue - beforValue) / time * timeSpeed;
+                changData[i] = beforeData[i] + (stressData[i] - beforeData[i]) / time * timeSpeed;
             }
 
             mPath.lineTo(width / (ySum + 1.0f) * (i + 2.0f), yValue);
@@ -260,17 +261,16 @@ public class DynamicCurveView extends View {
 
         canvas.drawPath(mPath, linePaint);
 
-        if (timeSpeed < time) {
+        if (timeSpeed < time && isChanging) {
             new Timer().schedule(new TimerTask() {
                 @Override
                 public void run() {
                 }
             }, 5);
-
+            timeSpeed++;
             invalidate();
         }
 
-        timeSpeed++;
     }
 
     /**
@@ -329,9 +329,9 @@ public class DynamicCurveView extends View {
 
     //设置数据 需要运行在主线程中
     public void setDynamicCurveData(float[] stressData) {
-//        this.stressData = changData;
+        stopChange();
         for (int i = 0; i < this.stressData.length; i++) {
-            beforeData[i] = this.stressData[i];
+            beforeData[i] = this.changData[i];
             //控制最大值 暂时不要
             if (stressData[i] > maxValue) {
                 this.stressData[i] = maxValue;
@@ -340,13 +340,14 @@ public class DynamicCurveView extends View {
             }
         }
         timeSpeed = 1;
-        invalidate();
+        startChange();
     }
 
     //按照分段设置数据
     public void setDynamicCurveData(int[] stressData) {
+        stopChange();
         for (int i = 0; i < this.stressData.length; i++) {
-            beforeData[i] = this.stressData[i];
+            beforeData[i] = this.changData[i];
             //控制最大值 暂时不要
             if (stressData[i] * 10 > maxValue) {
                 this.stressData[i] = maxValue / 10;
@@ -355,21 +356,29 @@ public class DynamicCurveView extends View {
             }
         }
         timeSpeed = 1;
-        invalidate();
-
+        startChange();
     }
 
     //设置数据 需要运行在主线程中
     public void setDynamicCurveData(int position, float stressData) {
-        beforeData[position] = this.stressData[position];
+        stopChange();
+        beforeData[position] = this.changData[position];
         this.stressData[position] = stressData;
         timeSpeed = 1;
-        invalidate();
+        startChange();
     }
 
     public int getStressData(int position) {
         return (int) this.stressData[position];
     }
 
+    public void stopChange() {
+        isChanging = false;
+    }
+
+    public void startChange(){
+        isChanging =true;
+        invalidate();
+    }
 
 }

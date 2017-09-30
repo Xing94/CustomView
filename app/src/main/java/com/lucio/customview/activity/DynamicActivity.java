@@ -12,12 +12,14 @@ import java.util.TimerTask;
 
 public class DynamicActivity extends AppCompatActivity {
 
+    private DynamicCurveView dynamicCurveView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dynamic);
 
-        final DynamicCurveView dynamicCurveView = (DynamicCurveView) findViewById(R.id.dynamic_view);
+        dynamicCurveView = (DynamicCurveView) findViewById(R.id.dynamic_view);
 
         new Timer().schedule(new TimerTask() {
             @Override
@@ -41,5 +43,17 @@ public class DynamicActivity extends AppCompatActivity {
             points[i] = new Random().nextInt(100);
         }
         return points;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        dynamicCurveView.startChange();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        dynamicCurveView.stopChange();
     }
 }
