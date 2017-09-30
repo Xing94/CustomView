@@ -42,7 +42,7 @@ public class DynamicCurveView extends View {
     //之前的数据 两个数据的变化来控制曲线变化效果
     private float[] beforeData;
     //变化中的数据
-    private float[] changData;
+//    private float[] changData;
 
     //网格X线的数量
     private float xSum;
@@ -127,7 +127,7 @@ public class DynamicCurveView extends View {
         ySum = 12.0f;
 
         radius = 10.0f;
-        maxValue = 20;
+        maxValue = 100;
         valueRange = 0;
 
         width = getWidth();
@@ -135,15 +135,15 @@ public class DynamicCurveView extends View {
 
         stressData = new float[(int) ySum - 1];
         beforeData = new float[(int) ySum - 1];
-        changData = new float[(int) ySum - 1];
+//        changData = new float[(int) ySum - 1];
         for (int i = 0; i < stressData.length; i++) {
             stressData[i] = 0.0f;
             beforeData[i] = 0.0f;
-            changData[i] = 0.0f;
+//            changData[i] = 0.0f;
         }
 
         timeSpeed = 1;
-        time = 1000;
+        time = 20;
 
     }
 
@@ -228,7 +228,7 @@ public class DynamicCurveView extends View {
         float yValue;
         float nowValue = height - height / (xSum + 1.0f) - stressData[0] / maxValue * valueRange;
         float beforValue = height - height / (xSum + 1.0f) - beforeData[0] / maxValue * valueRange;
-        changData[0] = stressData[0] / time * timeSpeed;
+//        changData[0] = stressData[0] / time * timeSpeed;
 
         if (stressData[0] > beforeData[0]) {
             yValue = beforValue - (beforValue - nowValue) / time * timeSpeed;
@@ -245,7 +245,7 @@ public class DynamicCurveView extends View {
         for (int i = 1; i < stressData.length; i++) {
             nowValue = height - height / (xSum + 1.0f) - stressData[i] / maxValue * valueRange;
             beforValue = height - height / (xSum + 1.0f) - beforeData[i] / maxValue * valueRange;
-            changData[i] = stressData[i] / time * timeSpeed;
+//            changData[i] = stressData[i] / time * timeSpeed;
 
             if (stressData[0] > beforeData[0]) {
                 yValue = beforValue - (beforValue - nowValue) / time * timeSpeed;
@@ -331,7 +331,7 @@ public class DynamicCurveView extends View {
     public void setDynamicCurveData(float[] stressData) {
 //        this.stressData = changData;
         for (int i = 0; i < this.stressData.length; i++) {
-            beforeData[i] = this.changData[i];
+            beforeData[i] = this.stressData[i];
             //控制最大值 暂时不要
             if (stressData[i] > maxValue) {
                 this.stressData[i] = maxValue;
