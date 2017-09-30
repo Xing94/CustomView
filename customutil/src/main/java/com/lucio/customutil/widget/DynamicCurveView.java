@@ -127,7 +127,7 @@ public class DynamicCurveView extends View {
         ySum = 12.0f;
 
         radius = 10.0f;
-        maxValue = 100;
+        maxValue = 20;
         valueRange = 0;
 
         width = getWidth();
