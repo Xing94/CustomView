@@ -31,7 +31,7 @@ public class WaveView extends SurfaceView implements SurfaceHolder.Callback {
     private List<Float> pointXData;
     //波动点高度
     private List<Float> waveData;
-    //师徒的高度和宽度
+    //视图的高度和宽度
     private int width;
     private int height;
     //移动速度
@@ -43,7 +43,11 @@ public class WaveView extends SurfaceView implements SurfaceHolder.Callback {
     //波动点之间的间隔
     private float waveGap;
 
+    //绘制路径
     private Path mPath;
+
+    //绘制样式
+    private DrawStyle mDrawStyle;
 
     public WaveView(Context context) {
         super(context);
@@ -73,6 +77,8 @@ public class WaveView extends SurfaceView implements SurfaceHolder.Callback {
         waveWidth = 300.0f;
         xSpeed = 5;
 
+        mDrawStyle = DrawStyle.BEZIER;
+
         isRunning = true;
         linePaint = new Paint();
         linePaint.setAntiAlias(true);
@@ -86,6 +92,7 @@ public class WaveView extends SurfaceView implements SurfaceHolder.Callback {
         final SurfaceHolder holder = getHolder();
         holder.addCallback(this);
 
+        //移动绘制线程
         drawThread = new Thread() {
             @Override
             public void run() {
@@ -127,6 +134,10 @@ public class WaveView extends SurfaceView implements SurfaceHolder.Callback {
         isRunning = false;
     }
 
+    /**
+     * 绘制画面
+     * @param canvas
+     */
     private void doDraw(Canvas canvas) {
         if (waveData.size() > 0) {
             if (pointXData.get(0) > width + waveWidth) {
@@ -159,21 +170,31 @@ public class WaveView extends SurfaceView implements SurfaceHolder.Callback {
         }
 
         for (int i = 0; i < pointXData.size(); i++) {
-            //画波动点
-//            drawWave(canvas, i);
 
-            drawBezier(canvas, i);
-
+            switch (mDrawStyle) {
+                case ECG:
+                    drawEcg(canvas, i);
+                    break;
+                case WAVE:
+                    drawWave(canvas, i);
+                    break;
+                case BEZIER:
+                    drawBezier(canvas, i);
+                    break;
+            }
         }
     }
 
     /**
      * 画波动点 矩形 向上突出
-     * @param canvas 画布
+     *
+     * @param canvas    画布
      * @param waveIndex 波动点的位置
      */
     private void drawWave(Canvas canvas, int waveIndex) {
         mPath.reset();
+
+        //起点绘制
         mPath.moveTo(pointXData.get(waveIndex), yAxle + linePaint.getStrokeWidth() / 2);
         mPath.lineTo(pointXData.get(waveIndex), yAxle - waveData.get(waveIndex));
         mPath.lineTo(pointXData.get(waveIndex) - waveWidth, yAxle - waveData.get(waveIndex));
@@ -224,8 +245,10 @@ public class WaveView extends SurfaceView implements SurfaceHolder.Callback {
      */
     private void drawEcg(Canvas canvas, int waveIndex) {
         mPath.reset();
+
         mPath.moveTo(pointXData.get(waveIndex), yAxle + linePaint.getStrokeWidth() / 2);
 
+        mPath.lineTo(pointXData.get(waveIndex) - waveWidth / 2, yAxle + linePaint.getStrokeWidth() / 2 - waveData.get(waveIndex));
 
         mPath.lineTo(pointXData.get(waveIndex) - waveWidth, yAxle + linePaint.getStrokeWidth() / 2);
 
@@ -233,12 +256,19 @@ public class WaveView extends SurfaceView implements SurfaceHolder.Callback {
 
         //用drawLine，去缺角
         if (waveIndex < pointXData.size() - 1) {
-            canvas.drawLine(pointXData.get(waveIndex) - waveWidth, yAxle, pointXData.get(waveIndex + 1), yAxle, linePaint);
+            canvas.drawLine(pointXData.get(waveIndex) - waveWidth,
+                    yAxle, pointXData.get(waveIndex + 1), yAxle, linePaint);
         }
     }
 
-    //波动
-    public void wave(float point) {
+    /**
+     * 波动：传递波动数据和波动类型
+     *
+     * @param point 波动的高度
+     * @param drawStyle 波动的类型：{@link DrawStyle}
+     */
+    public void wave(float point, DrawStyle drawStyle) {
+        mDrawStyle = drawStyle;
         if (point > 0) {
             waveData.add(point);
             if (pointXData.size() > 0) {
@@ -253,5 +283,9 @@ public class WaveView extends SurfaceView implements SurfaceHolder.Callback {
             }
 
         }
+    }
+
+    public enum DrawStyle {
+        BEZIER, ECG, WAVE
     }
 }

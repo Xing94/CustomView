@@ -13,7 +13,6 @@ import java.util.TimerTask;
 /**
  * 心电图activity
  * https://github.com/Xing94/CustomView.git
- *
  */
 public class EcgActivity extends AppCompatActivity {
 
@@ -26,7 +25,8 @@ public class EcgActivity extends AppCompatActivity {
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                ((WaveView) findViewById(R.id.ecg_view)).wave(new Random().nextInt(200) + 300);
+                ((WaveView) findViewById(R.id.ecg_view)).wave
+                        (new Random().nextInt(200) + 300, WaveView.DrawStyle.ECG);
             }
         };
         timer.schedule(task, 0, 2000);

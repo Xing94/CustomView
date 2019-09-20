@@ -96,10 +96,15 @@ public class DynamicCurveView extends View {
         griddingPaint.setColor(Color.parseColor("#00c6d0"));
 
         hiddenPaint = new Paint();
+        //画线的样式
         hiddenPaint.setStyle(Paint.Style.STROKE);
+        //线宽度
         hiddenPaint.setStrokeWidth(1.0f);
+        //抗锯齿
         hiddenPaint.setAntiAlias(true);
+        //画线透明度1-255
         hiddenPaint.setAlpha(25);
+        //画线颜色
         hiddenPaint.setColor(Color.parseColor("#00c6d0"));
 
         axlePaint = new Paint();
