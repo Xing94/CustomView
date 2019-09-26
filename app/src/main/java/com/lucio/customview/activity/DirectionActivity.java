@@ -2,6 +2,7 @@ package com.lucio.customview.activity;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.TextView;
 
 import com.lucio.customutil.widget.DirectionView;

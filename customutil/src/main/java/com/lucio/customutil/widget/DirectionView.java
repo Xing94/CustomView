@@ -1,15 +1,24 @@
 package com.lucio.customutil.widget;
 
+import android.animation.Animator;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
+import android.appwidget.AppWidgetHost;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.BitmapShader;
+import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.RectF;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
+
+import com.lucio.customutil.R;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +58,10 @@ public class DirectionView extends View {
     //是否出错
     private boolean isError;
 
-    //错误点击事件
+    //上下空余高度
+    private int emptyHeight;
+
+    //触摸事件
     private DirectionTouchListener directionTouchListener;
 
     public DirectionView(Context context) {
@@ -82,17 +94,19 @@ public class DirectionView extends View {
         //设置为true之后才能接收ACTION_MOVE等手势
         setClickable(true);
 
+        emptyHeight = 20;
+
         //提示颜色
-        hintTextColor = Color.parseColor("#FFFFFF");
+        hintTextColor = Color.parseColor("#5AC8FA");
         //折线颜色
-        directionColor = Color.parseColor("#FFFFFF");
+        directionColor = Color.parseColor("#5AC8FA");
         //定位颜色
-        locationColor = Color.parseColor("#FFFFFF");
+        locationColor = Color.parseColor("#DCDCDC");
 
         //走势折线画笔
         directionPaint = new Paint();
         directionPaint.setStyle(Paint.Style.STROKE);
-        directionPaint.setStrokeWidth(10f);
+        directionPaint.setStrokeWidth(8f);
         directionPaint.setAntiAlias(true);
         directionPaint.setColor(directionColor);
         //连接的外边缘以圆弧的方式相交
@@ -103,16 +117,19 @@ public class DirectionView extends View {
         //定位线画笔
         locationPaint = new Paint();
         locationPaint.setStyle(Paint.Style.STROKE);
-        locationPaint.setStrokeWidth(2f);
+        locationPaint.setStrokeWidth(3f);
         locationPaint.setAntiAlias(true);
         locationPaint.setColor(locationColor);
 
         //提示文字画笔
         hintTextPaint = new Paint();
         hintTextPaint.setStyle(Paint.Style.STROKE);
-        hintTextPaint.setTextSize(36);
+        hintTextPaint.setTextSize(50);
         hintTextPaint.setAntiAlias(true);
         hintTextPaint.setColor(hintTextColor);
+
+        //绘制圆环
+//        cirPaint
 
         directionPath = new Path();
 
@@ -135,10 +152,10 @@ public class DirectionView extends View {
 
         if (directionBeanList != null && directionBeanList.size() > 0) {
             isError = false;
-            drawDirection(canvas);
             if (isTouch) {
-                drawLocation(canvas);
+                drawLocationLine(canvas);
             }
+            drawDirection(canvas);
         } else {
             drawErrorHint(canvas);
         }
@@ -167,6 +184,9 @@ public class DirectionView extends View {
         boolean isGetData = false;
         //定位圆点的坐标
         float[] junctionIndex = {0, 0};
+
+        float tempHeight = height - emptyHeight * 2;
+
         for (int i = 0; i < directionBeanList.size(); i++) {
 
             //绘制走势折线图
@@ -174,17 +194,18 @@ public class DirectionView extends View {
                 float x = 0;
                 //设置数据点对应的x坐标
                 directionBeanList.get(i).setX(x);
-                directionPath.moveTo(x, directionBeanList.get(i).getY() * height);
+                directionPath.moveTo(x, emptyHeight + (1 - directionBeanList.get(i).getY()) * tempHeight);
 
             } else {
                 float x = width / (directionBeanList.size() - 1) * i;
                 directionBeanList.get(i).setX(x);
 
-                directionPath.lineTo(x, directionBeanList.get(i).getY() * height);
+                directionPath.lineTo(x, emptyHeight + (1 - directionBeanList.get(i).getY()) * tempHeight);
 
             }
 
-//            canvas.drawCircle(directionBeanList.get(i).getX(), directionBeanList.get(i).getY() * height, 3, directionPaint);
+            //绘制每个数据点的圆点
+//            canvas.drawCircle(directionBeanList.get(i).getX(), (1-directionBeanList.get(i).getY()) * height, 3, directionPaint);
 
             //输出定位线附近的的数据
             if (directionTouchListener != null) {
@@ -218,19 +239,46 @@ public class DirectionView extends View {
                             //只获取一次数据
                             isGetData = true;
                             //数据回调
-                            directionTouchListener.lineTouch(directionBeanList.get(i));
+                            directionTouchListener.lineTouch(new DirectionBean(touchX, junctionIndex[1]));
                         }
                     }
                 }
             }
         }
 
+
+        //增加绘制动画
+        ObjectAnimator animator=new ObjectAnimator();
+        animator.setDuration(2000);
+        animator.setFloatValues(0, 1f);
+        animator.setTarget(this);
+        animator.start();
+
         //绘制走势折线图
         canvas.drawPath(directionPath, directionPaint);
 
-        if (isTouch) {
+        if (isTouch && touchX >= 0) {
+            //需要设置当前view的layerType，setShadowLayer才会对drawCircle作用
+            setLayerType(LAYER_TYPE_SOFTWARE, null);
+
+            int arcWidth = 30;
+
+            Paint arcPaint = new Paint();
+            arcPaint.setStrokeWidth(arcWidth);
+            arcPaint.setStyle(Paint.Style.FILL);
+            arcPaint.setColor(Color.parseColor("#FFFFFF"));
+            arcPaint.setAntiAlias(true);
+            //绘制阴影
+            arcPaint.setShadowLayer(20f, 0, 0, Color.parseColor("#32000000"));
+
             //绘制定位圆点：定位圆点为定位线和走势折线图的交点
-            canvas.drawCircle(junctionIndex[0], junctionIndex[1] * height, 15, directionPaint);
+            canvas.drawCircle(junctionIndex[0], emptyHeight + (1 - junctionIndex[1]) * tempHeight, arcWidth, arcPaint);
+
+            arcPaint.setShadowLayer(0f, 0, 0, Color.parseColor("#FF0000"));
+            arcPaint.setColor(Color.parseColor("#5AC8FA"));
+
+            canvas.drawCircle(junctionIndex[0], emptyHeight + (1 - junctionIndex[1]) * tempHeight, arcWidth / 2, arcPaint);
+
         }
 
     }
@@ -240,9 +288,10 @@ public class DirectionView extends View {
      *
      * @param canvas
      */
-    private void drawLocation(Canvas canvas) {
+    private void drawLocationLine(Canvas canvas) {
         canvas.drawLine(touchX, 0, touchX, getHeight(), locationPaint);
     }
+
 
     /**
      * @param event
@@ -316,6 +365,14 @@ public class DirectionView extends View {
         private float x;
         private float y;
 
+        public DirectionBean() {
+        }
+
+        public DirectionBean(float x, float y) {
+            this.x = x;
+            this.y = y;
+        }
+
         public float getX() {
             return x;
         }
@@ -337,6 +394,7 @@ public class DirectionView extends View {
 
         //错误触摸事件：数据错误时为刷新
         void errorTouch();
+
         //定位线获取数据回调
         void lineTouch(DirectionBean directionBean);
     }
