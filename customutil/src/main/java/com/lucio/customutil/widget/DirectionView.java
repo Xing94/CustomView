@@ -248,11 +248,11 @@ public class DirectionView extends View {
 
 
         //增加绘制动画
-        ObjectAnimator animator=new ObjectAnimator();
-        animator.setDuration(2000);
-        animator.setFloatValues(0, 1f);
-        animator.setTarget(this);
-        animator.start();
+//        ObjectAnimator animator=new ObjectAnimator();
+//        animator.setDuration(2000);
+//        animator.setFloatValues(0, 1f);
+//        animator.setTarget(this);
+//        animator.start();
 
         //绘制走势折线图
         canvas.drawPath(directionPath, directionPaint);
