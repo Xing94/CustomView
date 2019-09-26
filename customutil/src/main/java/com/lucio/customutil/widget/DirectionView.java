@@ -1,14 +1,7 @@
 package com.lucio.customutil.widget;
 
-import android.animation.Animator;
-import android.animation.ObjectAnimator;
-import android.animation.ValueAnimator;
-import android.appwidget.AppWidgetHost;
+import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.BitmapShader;
-import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -17,8 +10,6 @@ import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
-
-import com.lucio.customutil.R;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +38,8 @@ public class DirectionView extends View {
     private float width;
     //宽高度
     private float height;
+    //数据定位点圆的半径
+    private float arcWidth;
 
     //错误提示颜色
     private int hintTextColor;
@@ -128,20 +121,20 @@ public class DirectionView extends View {
         hintTextPaint.setAntiAlias(true);
         hintTextPaint.setColor(hintTextColor);
 
-        //绘制圆环
-//        cirPaint
-
+        //折线走势图绘制路径
         directionPath = new Path();
-
+        //走势数据
         directionBeanList = new ArrayList<>();
 
         width = getWidth();
         height = getHeight();
 
+        arcWidth = 30;
+        //是否触摸当当前view
         isTouch = false;
-
+        //触摸点的x坐标
         touchX = -1;
-
+        //是否出现错误
         isError = false;
 
     }
@@ -246,7 +239,6 @@ public class DirectionView extends View {
             }
         }
 
-
         //增加绘制动画
 //        ObjectAnimator animator=new ObjectAnimator();
 //        animator.setDuration(2000);
@@ -260,8 +252,6 @@ public class DirectionView extends View {
         if (isTouch && touchX >= 0) {
             //需要设置当前view的layerType，setShadowLayer才会对drawCircle作用
             setLayerType(LAYER_TYPE_SOFTWARE, null);
-
-            int arcWidth = 30;
 
             Paint arcPaint = new Paint();
             arcPaint.setStrokeWidth(arcWidth);
@@ -286,7 +276,7 @@ public class DirectionView extends View {
     /**
      * 绘制定位线
      *
-     * @param canvas
+     * @param canvas 绘制画板
      */
     private void drawLocationLine(Canvas canvas) {
         canvas.drawLine(touchX, 0, touchX, getHeight(), locationPaint);
@@ -294,8 +284,8 @@ public class DirectionView extends View {
 
 
     /**
-     * @param event
-     * @return
+     * @param event 触摸事件
+     * @return 是否拦截事件
      * @see #setClickable(boolean)
      * <p>
      * view只有在设置clickable为true的时候，才会接收到ACTION_MOVE、ACTION_UP等事件，
@@ -304,6 +294,7 @@ public class DirectionView extends View {
      * getX()：获取的是以被点击的控件左上角为坐标原点的横坐标
      * getRawX()：获取的是以屏幕左上角为坐标原点的横坐标
      */
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
