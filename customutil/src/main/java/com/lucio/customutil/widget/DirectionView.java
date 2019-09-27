@@ -2,19 +2,27 @@ package com.lucio.customutil.widget;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.support.annotation.Nullable;
+import android.support.v4.widget.NestedScrollView;
 import android.util.AttributeSet;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+
+import com.lucio.customutil.R;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class DirectionView extends View {
+/**
+ * k线图
+ */
+public class DirectionView<T> extends View {
 
     //折线走势画笔
     private Paint directionPaint;
@@ -27,7 +35,7 @@ public class DirectionView extends View {
     private Path directionPath;
 
     //走势路径数据
-    private List<DirectionBean> directionBeanList;
+    private List<DirectionBean<T>> directionBeanList;
 
     //点击到的横坐标
     private float touchX;
@@ -38,8 +46,6 @@ public class DirectionView extends View {
     private float width;
     //宽高度
     private float height;
-    //数据定位点圆的半径
-    private float arcWidth;
 
     //错误提示颜色
     private int hintTextColor;
@@ -53,23 +59,29 @@ public class DirectionView extends View {
 
     //上下空余高度
     private int emptyHeight;
+    private float downY;
 
     //触摸事件
-    private DirectionTouchListener directionTouchListener;
+    private DirectionTouchListener<T> directionTouchListener;
+
+    //当折线图的parentView有scrollView时，解决手势冲突
+    private NestedScrollView mParentScroll;
+    //手势检测类
+    private GestureDetector mGestureDetector;
 
     public DirectionView(Context context) {
         super(context);
-        init();
+        init(context, null, 0);
     }
 
     public DirectionView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
-        init();
+        init(context, attrs, 0);
     }
 
     public DirectionView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
+        init(context, attrs, defStyleAttr);
     }
 
     @Override
@@ -83,18 +95,24 @@ public class DirectionView extends View {
         }
     }
 
-    private void init() {
+    private void init(Context context, AttributeSet attrs, int defStyleAttr) {
         //设置为true之后才能接收ACTION_MOVE等手势
         setClickable(true);
 
-        emptyHeight = 20;
-
-        //提示颜色
-        hintTextColor = Color.parseColor("#5AC8FA");
         //折线颜色
         directionColor = Color.parseColor("#5AC8FA");
         //定位颜色
         locationColor = Color.parseColor("#DCDCDC");
+        //提示文字颜色
+        hintTextColor = Color.parseColor("#8a8a8f");
+
+        @SuppressLint("Recycle") TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.DirectionView);
+
+        //设置错误提示的信息
+        float hintTextSize = typedArray.getDimension(R.styleable.DirectionView_hint_text_size, 40);
+        hintTextColor = typedArray.getColor(R.styleable.DirectionView_hint_text_color, Color.parseColor("#8a8a8f"));
+
+        emptyHeight = 20;
 
         //走势折线画笔
         directionPaint = new Paint();
@@ -117,39 +135,75 @@ public class DirectionView extends View {
         //提示文字画笔
         hintTextPaint = new Paint();
         hintTextPaint.setStyle(Paint.Style.STROKE);
-        hintTextPaint.setTextSize(50);
+        hintTextPaint.setTextSize(40);
         hintTextPaint.setAntiAlias(true);
         hintTextPaint.setColor(hintTextColor);
 
-        //折线走势图绘制路径
         directionPath = new Path();
-        //走势数据
+
         directionBeanList = new ArrayList<>();
 
         width = getWidth();
         height = getHeight();
 
-        arcWidth = 30;
-        //是否触摸当当前view
         isTouch = false;
-        //触摸点的x坐标
+
         touchX = -1;
-        //是否出现错误
+
         isError = false;
 
+        //手势监听
+        mGestureDetector = new GestureDetector(getContext(), new GestureDetector.SimpleOnGestureListener() {
+            /**
+             * 惯性滑动手势
+             * @param e1 action_down的MotionEvent
+             * @param e2 action_up的MotionEvent
+             * @param velocityX 惯性滑动的X速度
+             * @param velocityY 惯性滑动的Y速度
+             * @return 是否进行事件拦截
+             */
+            public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                if (mParentScroll != null) {
+
+                    //参数>0向上滑动，小于零向下滑动，onFling的值与参数相反
+                    mParentScroll.fling((int) -velocityY);
+
+                    downY = e2.getRawY();
+                }
+
+                return false;
+            }
+        });
+
+        //数据错误后的点击事件
+        setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (isError) {
+                    if (directionTouchListener != null) {
+                        directionTouchListener.getDirectionData(null);
+                        directionTouchListener.errorTouch();
+                    }
+                }
+            }
+        });
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         directionPath.reset();
 
+        //判断数据
         if (directionBeanList != null && directionBeanList.size() > 0) {
             isError = false;
             if (isTouch) {
+                //绘制定位线
                 drawLocationLine(canvas);
             }
+            //绘制走势图
             drawDirection(canvas);
         } else {
+            //绘制错误提示文本
             drawErrorHint(canvas);
         }
     }
@@ -207,7 +261,7 @@ public class DirectionView extends View {
                     junctionIndex[0] = 0;
                     junctionIndex[1] = 0;
                     //当没有点击的时候，输出数据为null
-                    directionTouchListener.lineTouch(null);
+                    directionTouchListener.getDirectionData(null);
                 } else {
                     //是否已经获取到数据：避免重复获取
                     if (!isGetData) {
@@ -221,7 +275,7 @@ public class DirectionView extends View {
 
                             junctionIndex[1] = directionBeanList.get(i).getY();
 
-                            directionTouchListener.lineTouch(directionBeanList.get(i));
+                            directionTouchListener.getDirectionData(directionBeanList.get(i));
                         } else if (touchX < directionBeanList.get(i).getX() && i > 0) {
                             //触摸的x坐标与数据点x坐标不相等的时候：获取触摸点前一个x坐标的数据
                             //设置定位圆点的y坐标：计算前后两点之间的比例，通过touchX获取touchY
@@ -232,19 +286,13 @@ public class DirectionView extends View {
                             //只获取一次数据
                             isGetData = true;
                             //数据回调
-                            directionTouchListener.lineTouch(new DirectionBean(touchX, junctionIndex[1]));
+                            directionTouchListener.getDirectionData(new DirectionBean<>(touchX, junctionIndex[1],
+                                    directionBeanList.get(i).getData()));
                         }
                     }
                 }
             }
         }
-
-        //增加绘制动画
-//        ObjectAnimator animator=new ObjectAnimator();
-//        animator.setDuration(2000);
-//        animator.setFloatValues(0, 1f);
-//        animator.setTarget(this);
-//        animator.start();
 
         //绘制走势折线图
         canvas.drawPath(directionPath, directionPaint);
@@ -253,21 +301,25 @@ public class DirectionView extends View {
             //需要设置当前view的layerType，setShadowLayer才会对drawCircle作用
             setLayerType(LAYER_TYPE_SOFTWARE, null);
 
+            int arcWidth = 30;
+
             Paint arcPaint = new Paint();
             arcPaint.setStrokeWidth(arcWidth);
             arcPaint.setStyle(Paint.Style.FILL);
             arcPaint.setColor(Color.parseColor("#FFFFFF"));
             arcPaint.setAntiAlias(true);
-            //绘制阴影
+            //绘制外层圆的阴影
             arcPaint.setShadowLayer(20f, 0, 0, Color.parseColor("#32000000"));
 
-            //绘制定位圆点：定位圆点为定位线和走势折线图的交点
+            //绘制定位圆点：定位圆点为定位线和走势折线图的交点，外层白色圆
             canvas.drawCircle(junctionIndex[0], emptyHeight + (1 - junctionIndex[1]) * tempHeight, arcWidth, arcPaint);
 
+            //将里层圆的阴影设置为透明，不显示
             arcPaint.setShadowLayer(0f, 0, 0, Color.parseColor("#FF0000"));
-            arcPaint.setColor(Color.parseColor("#5AC8FA"));
 
-            canvas.drawCircle(junctionIndex[0], emptyHeight + (1 - junctionIndex[1]) * tempHeight, arcWidth / 2, arcPaint);
+            //绘制里层蓝色圆
+            arcPaint.setColor(Color.parseColor("#5AC8FA"));
+            canvas.drawCircle(junctionIndex[0], emptyHeight + (1 - junctionIndex[1]) * tempHeight, arcWidth / 2f, arcPaint);
 
         }
 
@@ -276,7 +328,7 @@ public class DirectionView extends View {
     /**
      * 绘制定位线
      *
-     * @param canvas 绘制画板
+     * @param canvas 画布
      */
     private void drawLocationLine(Canvas canvas) {
         canvas.drawLine(touchX, 0, touchX, getHeight(), locationPaint);
@@ -284,8 +336,8 @@ public class DirectionView extends View {
 
 
     /**
-     * @param event 触摸事件
-     * @return 是否拦截事件
+     * @param event 移动事件
+     * @return 是否拦截事件分发
      * @see #setClickable(boolean)
      * <p>
      * view只有在设置clickable为true的时候，才会接收到ACTION_MOVE、ACTION_UP等事件，
@@ -297,8 +349,16 @@ public class DirectionView extends View {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        //手势检测与TouchEvent绑定
+        mGestureDetector.onTouchEvent(event);
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
+                //将parentScrollView的时间分发拦截，不会触发scrollView的TouchEvent
+                if (mParentScroll != null) {
+                    downY = event.getRawY();
+                    mParentScroll.requestDisallowInterceptTouchEvent(true);
+                }
+                //获取定位线的坐标，错误则不获取
                 if (!isError) {
                     touchX = event.getX();
                     isTouch = true;
@@ -306,23 +366,32 @@ public class DirectionView extends View {
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
+                //获取定位线的坐标，错误则不获取
                 if (!isError) {
                     touchX = event.getX();
                     isTouch = true;
                     invalidate();
                 }
+                //手动滑动scrollview
+                if (mParentScroll != null) {
+                    //NestedScrollView触发smoothScrollTo需要设置fling为0，否则会触发惯性滑动，导致滑动距离出错，scrollView可不用设置
+                    mParentScroll.fling(0);
+                    mParentScroll.smoothScrollTo(0, (int) (mParentScroll.getScrollY() - event.getRawY() + downY));
+                    downY = event.getRawY();
+                }
                 break;
             case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                //手放开时，清空数据
                 if (!isError) {
-                    directionTouchListener.lineTouch(null);
+                    directionTouchListener.getDirectionData(null);
                     touchX = -1;
                     isTouch = false;
                     invalidate();
-                } else {
-                    if (directionTouchListener != null) {
-                        directionTouchListener.lineTouch(null);
-                        directionTouchListener.errorTouch();
-                    }
+                }
+                //将事件分发交还给ScrollView
+                if (mParentScroll != null) {
+                    mParentScroll.requestDisallowInterceptTouchEvent(false);
                 }
                 break;
 
@@ -330,12 +399,12 @@ public class DirectionView extends View {
         return super.onTouchEvent(event);
     }
 
-    public void setDirectionBeanList(List<DirectionBean> directionBeanList) {
+    public void setDirectionBeanList(List<DirectionBean<T>> directionBeanList) {
         this.directionBeanList = directionBeanList;
         invalidate();
     }
 
-    public void setDirectionTouchListener(DirectionTouchListener directionTouchListener) {
+    public void setDirectionTouchListener(DirectionTouchListener<T> directionTouchListener) {
         this.directionTouchListener = directionTouchListener;
     }
 
@@ -351,17 +420,24 @@ public class DirectionView extends View {
         this.locationColor = locationColor;
     }
 
-    public static class DirectionBean {
+    public void setScrollView(NestedScrollView scrollView) {
+        this.mParentScroll = scrollView;
+    }
+
+    public static class DirectionBean<T> {
 
         private float x;
         private float y;
 
+        private T data;
+
         public DirectionBean() {
         }
 
-        public DirectionBean(float x, float y) {
+        public DirectionBean(float x, float y, T data) {
             this.x = x;
             this.y = y;
+            this.data = data;
         }
 
         public float getX() {
@@ -379,15 +455,23 @@ public class DirectionView extends View {
         public void setY(float y) {
             this.y = y;
         }
+
+        public T getData() {
+            return data;
+        }
+
+        public void setData(T data) {
+            this.data = data;
+        }
     }
 
-    public interface DirectionTouchListener {
+    public interface DirectionTouchListener<T> {
 
         //错误触摸事件：数据错误时为刷新
         void errorTouch();
 
         //定位线获取数据回调
-        void lineTouch(DirectionBean directionBean);
+        void getDirectionData(DirectionBean<T> directionBean);
     }
 
 }

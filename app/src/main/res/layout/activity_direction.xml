@@ -6,25 +6,46 @@
     android:layout_height="match_parent"
     tools:context=".activity.DirectionActivity">
 
-    <com.lucio.customutil.widget.DirectionView
-        android:id="@+id/view_direction"
+    <android.support.v4.widget.NestedScrollView
+        android:id="@+id/scroll_view"
+        android:layout_marginTop="50dp"
+        android:background="@color/colorPrimary"
         android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:background="#F7f7f7"
-        android:layout_marginTop="10dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
 
-    <TextView
-        android:id="@+id/tv_data_show"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="@color/colorAccent"
-        android:textSize="20sp"
-        android:text="当前数据：空"
-        android:layout_marginTop="10dp"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/view_direction" />
+        <android.support.constraint.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="300dp"
+            android:paddingBottom="600dp">
+
+            <com.lucio.customutil.widget.DirectionView
+                android:id="@+id/view_direction"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="10dp"
+                android:background="#F7f7f7"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/tv_data_show"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="当前数据：空"
+                android:gravity="center"
+                android:textColor="@color/colorAccent"
+                android:textSize="20sp"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/view_direction" />
+
+        </android.support.constraint.ConstraintLayout>
+    </android.support.v4.widget.NestedScrollView>
+
 
 </android.support.constraint.ConstraintLayout>
